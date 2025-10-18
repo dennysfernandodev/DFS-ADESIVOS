@@ -2,8 +2,8 @@
 
 ## Pré-requisitos
 - Docker 24+ e Docker Compose Plugin 2+
-- Porta 80/443 liberadas para Traefik
-- Domínio apontado para o servidor via Cloudflare (proxy laranja ativo)
+- Porta 80 (e opcionalmente 443) liberada para o Nginx
+- Domínio apontado para o servidor (opcionalmente atrás do Cloudflare)
 
 ## Variáveis de ambiente
 Edite `.env` conforme necessário:
@@ -16,9 +16,8 @@ Edite `.env` conforme necessário:
 | `DB_NAME`, `DB_USER`, `DB_PASS` | Banco MariaDB |
 | `REDIS_PASS` | Senha do Redis Object Cache |
 | `WHATS_LINK` | Link/CTA do WhatsApp |
-| `TRAEFIK_ENTRYPOINT`, `TRAEFIK_ROUTER_RULE` | Configuração do Traefik |
 
-> **Trocar domínio**: altere `WP_URL`, `TRAEFIK_ROUTER_RULE`, ajustes no Cloudflare e rode `./scripts/setup.sh --rerun` (idempotente) + `wp search-replace antiga.novadom.com nova.novadom.com` via WP-CLI, se necessário.
+> **Trocar domínio**: altere `WP_URL`, ajuste o DNS e rode `./scripts/setup.sh --rerun` (idempotente) + `wp search-replace antiga.novadom.com nova.novadom.com` via WP-CLI, se necessário.
 
 ## Desenvolvimento
 ```bash
@@ -43,18 +42,18 @@ docker compose up -d
 - `seed-products`: reexecuta seed de produtos dummy
 
 ## Serviços
-- **Traefik**: proxy reverso (80/443) com suporte a TLS via Cloudflare.
-- **WordPress**: `wordpress:php8.2-fpm` + Nginx otimizado.
+- **Nginx**: reverse proxy (porta 80 exposta; adapte para HTTPS conforme necessidade).
+- **WordPress**: `wordpress:php8.2-fpm` servido pelo Nginx otimizado.
 - **MariaDB 10.11**: volume `db_data` persistente.
 - **Redis 7**: cache de objetos.
 - **Mailhog**: captura de e-mails em dev (`http://localhost:8025`).
 
 ## Produção
-1. Ajuste DNS no Cloudflare para apontar para o VPS (proxy laranja, SSL *Full* ou *Full Strict* se houver certificado válido).
-2. Configure tokens `CF_DNS_API_TOKEN`/`CF_ZONE_API_TOKEN` (opcional, se quiser emitir certificados ACME pelo Traefik).
+1. Ajuste DNS para apontar para o VPS/servidor que hospedará a stack (proxy laranja opcional no Cloudflare).
+2. Configure certificados TLS diretamente no Nginx (adicione arquivos e atualize `nginx/conf.d/default.conf` se desejar HTTPS).
 3. `docker compose up -d --build`.
 4. `./scripts/setup.sh` (idempotente: pode ser reexecutado para garantir estado).
-5. Ative modo "Sempre usar HTTPS" e regras de cache no Cloudflare (`/cart/`, `/checkout/`, `/my-account/` – *bypass*).
+5. Caso use Cloudflare, ative modo "Sempre usar HTTPS" e regras de cache (`/cart/`, `/checkout/`, `/my-account/` – *bypass*).
 
 ## Backups
 ```bash
@@ -91,11 +90,11 @@ Saída `OK/FAIL` para:
   - Endpoint `/wp-json/dfs/v1/rastreio?code=` redirecionando para Correios
 - Seed com 10 produtos dummy (simples/variáveis), atributos globais, categorias, páginas institucionais, menus, Rank Math configurado.
 
-## Cloudflare & Traefik
-- Certifique-se de que o origin está acessível em 80/443.
+## HTTPS & Cloudflare
+- Certifique-se de que o origin está acessível nas portas expostas (80/443).
 - Use política de cache estático (HTML bypass para `/cart/`, `/checkout/`, `/my-account/`).
 - Ative `Auto Minify` (HTML/CSS/JS) e `Brotli` no Cloudflare.
-- No Traefik, labels já configuram HSTS + redirect 80→443.
+- Configure redirect 80→443, HSTS e demais cabeçalhos diretamente no `nginx/conf.d/default.conf` caso utilize HTTPS.
 
 ## Troubleshooting
 - `docker compose logs -f wordpress` para ver WP-FPM.
