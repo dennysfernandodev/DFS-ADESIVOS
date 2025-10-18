@@ -1,33 +1,6 @@
 version: "3.9"
 
 services:
-  traefik:
-    image: traefik:v2.10
-    container_name: dfs-traefik
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.cloudflare.acme.tlschallenge=true
-      - --certificatesresolvers.cloudflare.acme.email=${WP_ADMIN_EMAIL}
-      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
-      - --log.level=INFO
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - proxy-network
-    environment:
-      - CF_API_EMAIL=${WP_ADMIN_EMAIL}
-      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
-      - CF_ZONE_API_TOKEN=${CF_ZONE_API_TOKEN:-}
-      - TZ=${TZ}
-    volumes:
-      - ./traefik/letsencrypt:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
-
   wordpress:
     image: wordpress:6.5.2-php8.2-fpm
     container_name: dfs-wordpress
@@ -51,7 +24,6 @@ services:
       - ./wp-content:/var/www/html/wp-content
       - ./php/php.ini:/usr/local/etc/php/conf.d/zz-dfs.ini:ro
     networks:
-      - proxy-network
       - internal
     depends_on:
       db:
@@ -70,25 +42,12 @@ services:
       - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./wp-content:/var/www/html/wp-content
     networks:
-      - proxy-network
+      - frontend
       - internal
     environment:
       - TZ=${TZ}
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.dfs.rule=${TRAEFIK_ROUTER_RULE}
-      - traefik.http.routers.dfs.entrypoints=${TRAEFIK_ENTRYPOINT}
-      - traefik.http.routers.dfs.service=dfs
-      - traefik.http.routers.dfs.tls=true
-      - traefik.http.routers.dfs.tls.certresolver=cloudflare
-      - traefik.http.routers.dfs.middlewares=dfs-https@docker,dfs-security@docker
-      - traefik.http.middlewares.dfs-https.redirectscheme.scheme=https
-      - traefik.http.middlewares.dfs-https.redirectscheme.permanent=true
-      - traefik.http.middlewares.dfs-security.headers.stsseconds=31536000
-      - traefik.http.middlewares.dfs-security.headers.stsincludesubdomains=true
-      - traefik.http.middlewares.dfs-security.headers.stspreload=true
-      - traefik.http.middlewares.dfs-security.headers.forcestsheader=true
-      - traefik.http.services.dfs.loadbalancer.server.port=80
+    ports:
+      - "80:80"
     restart: unless-stopped
 
   db:
@@ -161,8 +120,8 @@ services:
         condition: service_started
 
 networks:
-  proxy-network:
-    name: proxy-network
+  frontend:
+    driver: bridge
   internal:
     internal: true
 
