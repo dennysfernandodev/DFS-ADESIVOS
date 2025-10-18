@@ -1,0 +1,70 @@
+.dfs-hero-buttons .wp-block-button__link {
+  padding: 14px 28px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.dfs-badge-benefits {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 8px;
+  font-weight: 500;
+}
+
+.dfs-footer .woocommerce-product-search {
+  max-width: 340px;
+}
+
+.woocommerce ul.products li.product .button {
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+}
+
+.woocommerce div.product .summary .price {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--dfs-vermelho);
+}
+
+.dfs-benefits-band span::before {
+  content: '•';
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--dfs-vermelho);
+}
+
+.dfs-newsletter-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dfs-newsletter-form input[type="email"] {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.dfs-newsletter-form button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dfs-vermelho);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dfs-newsletter-form button:hover {
+  background: #c70500;
+}
+
+.dfs-floating-whats {
+  display: flex;
+}

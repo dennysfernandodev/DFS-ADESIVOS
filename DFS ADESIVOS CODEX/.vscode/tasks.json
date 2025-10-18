@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "up",
+      "type": "shell",
+      "command": "docker compose up -d",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "docker compose build --no-cache",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "setup",
+      "type": "shell",
+      "command": "./scripts/setup.sh",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "logs-wp",
+      "type": "shell",
+      "command": "docker compose logs -f wordpress",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "logs-nginx",
+      "type": "shell",
+      "command": "docker compose logs -f nginx",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "logs-db",
+      "type": "shell",
+      "command": "docker compose logs -f db",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "backup",
+      "type": "shell",
+      "command": "./scripts/backup.sh",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "restore",
+      "type": "shell",
+      "command": "./scripts/restore.sh ${input:backupFile}",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "wp-cli",
+      "type": "shell",
+      "command": "docker compose run --rm wp-cli shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "seed-products",
+      "type": "shell",
+      "command": "docker compose run --rm wp-cli eval-file scripts/seed_products.php -- --force",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "backupFile",
+      "type": "promptString",
+      "description": "Informe o caminho do arquivo de backup (.tar.gz)"
+    }
+  ]
+}

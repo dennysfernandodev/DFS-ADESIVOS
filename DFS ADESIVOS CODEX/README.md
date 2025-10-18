@@ -1,0 +1,106 @@
+# DFS Adesivos – Stack WordPress/WooCommerce
+
+## Pré-requisitos
+- Docker 24+ e Docker Compose Plugin 2+
+- Porta 80/443 liberadas para Traefik
+- Domínio apontado para o servidor via Cloudflare (proxy laranja ativo)
+
+## Variáveis de ambiente
+Edite `.env` conforme necessário:
+
+| Variável | Descrição |
+| --- | --- |
+| `WP_URL` | URL pública do WordPress (https://dfs.niid.com.br) |
+| `WP_TITLE` | Título do site |
+| `WP_ADMIN_USER`, `WP_ADMIN_PASS`, `WP_ADMIN_EMAIL` | Credenciais do admin |
+| `DB_NAME`, `DB_USER`, `DB_PASS` | Banco MariaDB |
+| `REDIS_PASS` | Senha do Redis Object Cache |
+| `WHATS_LINK` | Link/CTA do WhatsApp |
+| `TRAEFIK_ENTRYPOINT`, `TRAEFIK_ROUTER_RULE` | Configuração do Traefik |
+
+> **Trocar domínio**: altere `WP_URL`, `TRAEFIK_ROUTER_RULE`, ajustes no Cloudflare e rode `./scripts/setup.sh --rerun` (idempotente) + `wp search-replace antiga.novadom.com nova.novadom.com` via WP-CLI, se necessário.
+
+## Desenvolvimento
+```bash
+# dentro de Sites/DFS ADESIVOS
+cp .env .env.local  # opcional para customizações locais
+
+# subir stack
+docker compose up -d
+
+# executar provisionamento completo
+./scripts/setup.sh
+```
+
+### Tarefas VS Code
+`/.vscode/tasks.json` contém automações úteis:
+- `up`: `docker compose up -d`
+- `build`: rebuild sem cache
+- `setup`: roda `scripts/setup.sh`
+- `logs-*`: tail de logs (wordpress/nginx/db)
+- `backup` / `restore`
+- `wp-cli`: shell interativo `wp`
+- `seed-products`: reexecuta seed de produtos dummy
+
+## Serviços
+- **Traefik**: proxy reverso (80/443) com suporte a TLS via Cloudflare.
+- **WordPress**: `wordpress:php8.2-fpm` + Nginx otimizado.
+- **MariaDB 10.11**: volume `db_data` persistente.
+- **Redis 7**: cache de objetos.
+- **Mailhog**: captura de e-mails em dev (`http://localhost:8025`).
+
+## Produção
+1. Ajuste DNS no Cloudflare para apontar para o VPS (proxy laranja, SSL *Full* ou *Full Strict* se houver certificado válido).
+2. Configure tokens `CF_DNS_API_TOKEN`/`CF_ZONE_API_TOKEN` (opcional, se quiser emitir certificados ACME pelo Traefik).
+3. `docker compose up -d --build`.
+4. `./scripts/setup.sh` (idempotente: pode ser reexecutado para garantir estado).
+5. Ative modo "Sempre usar HTTPS" e regras de cache no Cloudflare (`/cart/`, `/checkout/`, `/my-account/` – *bypass*).
+
+## Backups
+```bash
+# gera backup em backups/dfs-adesivos-YYYYmmdd-HHMMSS.tar.gz
+./scripts/backup.sh
+
+# restaura a partir de arquivo
+./scripts/restore.sh backups/dfs-adesivos-20240101-120000.tar.gz
+```
+Inclui dump do banco (`db.sql`) + `wp-content` completo.
+
+## Healthcheck
+Execute para validar o ambiente:
+```bash
+docker compose run --rm wp-cli eval-file scripts/healthcheck.php
+```
+Saída `OK/FAIL` para:
+- WordPress instalado e permalink `/%postname%/`
+- Plugins essenciais ativos (WooCommerce, Pix, Correios, Redis, W3TC, Rank Math etc.)
+- Redis ativo (`wp_using_ext_object_cache`)
+- Páginas fundamentais publicadas e atribuídas
+- Correios + Pix habilitados
+- Schema JSON-LD via `dfs_output_schema`
+- CTA WhatsApp no menu
+- Tentativa de Lighthouse (usa `docker run femtopixel/google-lighthouse` – execute manualmente se necessário)
+
+## Conteúdo inicial
+- Tema pai **Blocksy** + child theme `dfs-adesivos-child` (cores, tipografia, header/footer customizados).
+- MU Plugin `dfs-core.php` com:
+  - Campos extras de produto (tempo de produção, resistência externa)
+  - Botões WhatsApp (topo + página do produto com variações dinâmicas)
+  - Badge “Desconto no Pix”
+  - Schema.org (Organization + Product)
+  - Endpoint `/wp-json/dfs/v1/rastreio?code=` redirecionando para Correios
+- Seed com 10 produtos dummy (simples/variáveis), atributos globais, categorias, páginas institucionais, menus, Rank Math configurado.
+
+## Cloudflare & Traefik
+- Certifique-se de que o origin está acessível em 80/443.
+- Use política de cache estático (HTML bypass para `/cart/`, `/checkout/`, `/my-account/`).
+- Ative `Auto Minify` (HTML/CSS/JS) e `Brotli` no Cloudflare.
+- No Traefik, labels já configuram HSTS + redirect 80→443.
+
+## Troubleshooting
+- `docker compose logs -f wordpress` para ver WP-FPM.
+- `docker compose exec db mysql -u dfs_wp -p` para acessar banco.
+- `docker compose run --rm wp-cli plugin list` para auditar plugins.
+- Caso Lighthouse falhe por ausência de Docker dentro do container, execute manualmente na máquina host.
+
+Bons deploys! 😄
